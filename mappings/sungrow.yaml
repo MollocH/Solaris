@@ -1,0 +1,22 @@
+inverter_slug: Sungrow SH10RT
+mappings:
+  -
+    name: ARM firmware
+    register_address: 4954
+    length: 12
+    data_type: string
+  -
+    name: DSP firmware
+    register_address: 4969
+    length: 13
+    data_type: string
+  -
+    name: Device type
+    register_address: 5000
+    length: 1
+    data_type: hex
+  -
+    name: Inverter temperature
+    register_address: 5008
+    length: 1
+    data_type: decimal10

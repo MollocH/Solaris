@@ -1,0 +1,11 @@
+inverter:
+  inverter_address: 10.1.1.108
+  inverter_port: 502
+  tcp_read_timeout: 10
+  tcp_connect_timeout: 3
+  inverter_modbus_uid: 1
+influxdb2:
+  uri: http://localhost:8086
+  org: 3b0d0b7902857c8a
+  bucket: test
+  token: "Bbm0UuwC-d3auMbIX-OH0B6uE2PX1Qo_Mq_Axds0d_w4T7uJtbNCWUaTAkwkRwSVP2z-TXjQvQRtFYEt6-iypg=="
