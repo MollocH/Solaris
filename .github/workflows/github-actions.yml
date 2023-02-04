@@ -3,7 +3,7 @@ run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 on: [push]
 jobs:
   Explore-GitHub-Actions:
-    runs-on: ubuntu:22.04
+    runs-on: ubuntu-22.04
     container:
       image: rust:1.67.0-slim-bullseye
     steps:
