@@ -13,6 +13,7 @@ jobs:
           image: rust:1.67.0-slim-bullseye
           options: -v ${{ github.workspace }}:/app
           run: |
+            cd /app
             ls -al
             cargo build
             ls -al
