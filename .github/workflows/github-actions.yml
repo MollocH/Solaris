@@ -13,7 +13,7 @@ jobs:
           image: rust:1.67.0-slim-bullseye
           options: -v ${{ github.workspace }}:/app
           run: |
-            apt-get update && apt-get install openssl-devel
+            apt-get update && apt-get install libssl-dev
             cd /app
             ls -al
             cargo build
