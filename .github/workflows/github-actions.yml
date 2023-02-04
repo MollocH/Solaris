@@ -6,5 +6,7 @@ jobs:
     runs-on: ubuntu-22.04
     container:
       image: rust:1.67.0-slim-bullseye
-    steps:
-      - run: cargo build
+      steps:
+        build:
+          - run: ls -al
+          - run: cargo build
