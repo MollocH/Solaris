@@ -1378,6 +1378,7 @@ dependencies = [
  "hex",
  "influxdb2",
  "modbus",
+ "openssl",
  "serde",
  "serde_yaml",
  "tokio",

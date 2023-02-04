@@ -13,6 +13,7 @@ futures = "0.3"
 hex = "0.4"
 influxdb2 = "0.3"
 modbus = "1"
+openssl = { version = "0.10", features = ["vendored"] }
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
 tokio = { version = "1.24", features = ["full"] }
