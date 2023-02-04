@@ -7,10 +7,12 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v2
-      - name: Run Container to compile the application
-        uses: docker://rust:1.67.0-slim-bullseye
+      - name: Compile
+        uses: addnab/docker-run-action@v3
         with:
-          args: >-
-            "ls -al /github/workspace"
-      - name: List files
-        run: ls -al /app
+          image: rust:1.67.0-slim-bullseye
+          options: -v ${{ github.workspace }}:/app
+          run: |
+            ls -al
+            cargo build
+            ls -al
