@@ -6,7 +6,14 @@ jobs:
     runs-on: ubuntu-22.04
     container:
       image: rust:1.67.0-slim-bullseye
-      steps:
-        build:
-          - run: ls -al
-          - run: cargo build
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v2
+      - name: Run Container to compile the application
+        uses: docker://rust:1.67.0-slim-bullseye
+        with:
+          args: >-
+            -v ${{ github.workspace }}:/app
+            /bin/bash -c "cd /app && cargo build"
+      - name: List files
+        run: ls -al /app
