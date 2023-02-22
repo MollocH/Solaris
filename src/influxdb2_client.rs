@@ -29,5 +29,6 @@ impl Influxdb2Client for SolarisInfluxdb2Client {
 
     async fn write(&self, datapoints: Vec<DataPoint>) {
         let result = self.client.write(&self.bucket, stream::iter(datapoints)).await;
+        result.unwrap();
     }
 }

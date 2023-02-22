@@ -8,6 +8,8 @@ use influxdb2_client::Influxdb2Client;
 use influxdb2_client::SolarisInfluxdb2Client;
 use modbus_client::ModbusClient;
 use modbus_client::SolarisModbusClient;
+use hex;
+use log::{debug, info, warn, error};
 
 mod inverter_config;
 mod modbus_client;
@@ -17,6 +19,7 @@ mod influxdb2_client;
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
     let args: Vec<String> = env::args().collect();
     let config_file = &args[1];
 
@@ -39,14 +42,17 @@ async fn main() {
         match mapping.data_type.as_str() {
             "string" => {
                 let result = registers.convert_to_string();
+                debug!("Register name {} has been read as type {} with value {}", mapping.name, mapping.data_type, result);
                 datapoints.push(datapoint_builder.field(mapping.name.to_case(Case::Snake), result).build().unwrap());
             }
             "hex" => {
                 let result = registers.convert_to_hex();
+                debug!("Register name {} has been read as type {} with value {}", mapping.name, mapping.data_type, result);
                 datapoints.push(datapoint_builder.field(mapping.name.to_case(Case::Snake), result).build().unwrap());
             }
             "decimal10" => {
                 let result = registers.convert_to_decimal10();
+                debug!("Register name {} has been read as type {} with value {}", mapping.name, mapping.data_type, result);
                 datapoints.push(datapoint_builder.field(mapping.name.to_case(Case::Snake), result).build().unwrap());
             }
             _ => {
