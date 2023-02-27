@@ -6,6 +6,8 @@ inverter:
   inverter_modbus_uid: 1
 influxdb2:
   uri: http://localhost:8086
-  org: 3b0d0b7902857c8a
-  bucket: test
-  token: "Bbm0UuwC-d3auMbIX-OH0B6uE2PX1Qo_Mq_Axds0d_w4T7uJtbNCWUaTAkwkRwSVP2z-TXjQvQRtFYEt6-iypg=="
+  org: ""
+  bucket: solaris
+  token: ""
+solaris:
+  read_frequency: 30 # in seconds
