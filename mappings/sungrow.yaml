@@ -19,4 +19,27 @@ mappings:
     name: Inverter temperature
     register_address: 5008
     length: 1
-    data_type: decimal10
+    data_type: float
+    precision: 0.1
+  -
+    name: Nominal Power Output
+    register_address: 5001
+    length: 1
+    data_type: float
+    precision: 0.1
+  -
+    name: Output Type
+    register_address: 5002
+    length: 1
+    data_type: u32
+    value_enum:
+      -
+        key: 0
+        value: Single phase
+      -
+        key: 1
+        value: 3P4L
+      -
+        key: 2
+        value: 3P3L
+

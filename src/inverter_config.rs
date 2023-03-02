@@ -13,6 +13,16 @@ pub struct Mapping {
     pub register_address: u16,
     pub length: u16,
     pub data_type: String,
+    #[serde(default)]
+    pub precision: f64,
+    #[serde(default)]
+    pub value_enum: Option<Vec<ValueEnum>>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ValueEnum {
+    pub key: String,
+    pub value: String,
 }
 
 pub fn read(config_file: &String) -> InverterConfig {

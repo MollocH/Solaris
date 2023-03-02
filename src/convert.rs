@@ -1,10 +1,11 @@
 use hex;
-use std::ops::Div;
+use std::ops::{Mul};
 
 pub trait Convert {
     fn convert_to_string(&self) -> String;
     fn convert_to_hex(&self) -> String;
-    fn convert_to_decimal10(&self) -> f64;
+    fn convert_to_float(&self, precision: &f64) -> f64;
+    fn convert_to_u32(&self) -> u32;
 }
 
 impl Convert for Vec<u16> {
@@ -13,6 +14,7 @@ impl Convert for Vec<u16> {
             .iter()
             .flat_map(|&r| r.to_be_bytes().to_vec())
             .collect();
+
         String::from_utf8_lossy(&bytes).trim().to_owned()
     }
 
@@ -24,7 +26,23 @@ impl Convert for Vec<u16> {
         hex::encode(&bytes)
     }
 
-    fn convert_to_decimal10(&self) -> f64 {
-        f64::from(self[0]).div(f64::from(10.0))
+    fn convert_to_float(&self, precision: &f64) -> f64 {
+        f64::from(self[0]).mul(precision)
+    }
+
+    fn convert_to_u32(&self) -> u32 {
+        if self.len() == 1 {
+            return u32::from(self[0]);
+        }
+
+        let bytes: [u8; 4] = self
+            .iter()
+            .map(|&r| r.to_be_bytes())
+            .flatten()
+            .collect::<Vec<u8>>()
+            .try_into()
+            .expect("input slice must contain exactly 2 u16 values");
+
+        u32::from_be_bytes(bytes)
     }
 }

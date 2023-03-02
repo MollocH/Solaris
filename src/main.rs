@@ -1,10 +1,11 @@
 use std::env;
 
+use crate::inverter_config::ValueEnum;
 use convert::Convert;
 use convert_case::{Case, Casing};
 use futures::stream;
 use influxdb2::models::DataPoint;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use modbus::{tcp, Client, Transport};
 use std::time::Duration;
 
@@ -22,6 +23,9 @@ async fn main() {
 
     let inverter_config = inverter_config::read(&config_file);
     let influxdb_client = get_influxdb2_client(&app_config.influxdb2);
+
+    info!("-------------------------------------------------------------------");
+    info!("Starting read cycle ...");
 
     loop {
         let mut modbus_client = get_modbus_client(&app_config.inverter);
@@ -70,8 +74,8 @@ async fn main() {
                         .unwrap();
                     datapoints.push(datapoint);
                 }
-                "decimal10" => {
-                    let result = registers.convert_to_decimal10();
+                "float" => {
+                    let result = registers.convert_to_float(&mapping.precision);
                     debug!(
                         "Register name {} has been read as type {} with value {}",
                         mapping.name, mapping.data_type, result
@@ -82,11 +86,36 @@ async fn main() {
                         .unwrap();
                     datapoints.push(datapoint);
                 }
+                "u32" => {
+                    let result = i64::from(registers.convert_to_u32());
+                    debug!(
+                        "Register name {} has been read as type {} with value {}",
+                        mapping.name, mapping.data_type, result
+                    );
+
+                    if mapping.value_enum.is_some() {
+                        let old_result = result.clone();
+                        let value_enum = &mapping.value_enum.as_ref().unwrap();
+                        let result = resolve_enum_value(&result, &value_enum);
+                        debug!(
+                            "Register name {} has an enum mapping which converted {} to {}",
+                            mapping.name, old_result, result
+                        );
+                    }
+
+                    let datapoint = datapoint_builder
+                        .field(mapping.name.to_case(Case::Snake), result)
+                        .build()
+                        .unwrap();
+                    datapoints.push(datapoint);
+                }
                 _ => {
-                    panic!(
-                        "register_type {} has no defined conversion",
+                    debug!("{:?}", registers);
+                    error!(
+                        "register_type {} has no defined conversion. Skipping",
                         mapping.data_type
-                    )
+                    );
+                    continue;
                 }
             }
         }
@@ -103,16 +132,33 @@ async fn main() {
             error!("{}", influxdb2_write_result.unwrap_err().to_string());
         }
 
-        debug!(
+        info!(
             "finished cycle. Waiting for {} seconds ...",
             app_config.solaris.read_frequency
         );
+        info!("-------------------------------------------------------------------");
 
         tokio::time::sleep(Duration::from_secs(
             app_config.solaris.read_frequency.into(),
         ))
         .await;
     }
+}
+
+fn resolve_enum_value<T: PartialEq + std::fmt::Debug>(
+    key: T,
+    enum_mapping: &Vec<ValueEnum>,
+) -> String {
+    let result = enum_mapping
+        .iter()
+        .find(|e| e.key == format!("{:?}", key))
+        .map(|e| &e.value[..]);
+
+    if result.is_none() {
+        // TODO: Handle
+    }
+
+    result.unwrap().to_string()
 }
 
 fn get_influxdb2_client(influxdb2: &app_config::Influxdb2) -> influxdb2::Client {

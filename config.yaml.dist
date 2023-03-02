@@ -1,5 +1,5 @@
 inverter:
-  inverter_address: 10.1.1.108
+  inverter_address: 127.0.0.1
   inverter_port: 502
   tcp_read_timeout: 10
   tcp_connect_timeout: 3
