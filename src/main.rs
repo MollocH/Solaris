@@ -1,10 +1,12 @@
 use std::env;
 
-use crate::inverter_config::ValueEnum;
+use crate::app_config::AppConfig;
+use crate::inverter_config::Mapping;
 use convert::Convert;
 use convert_case::{Case, Casing};
 use futures::stream;
-use influxdb2::models::DataPoint;
+use influxdb2::models::data_point::DataPointError;
+use influxdb2::models::{DataPoint, FieldValue};
 use log::{debug, error, info};
 use modbus::{tcp, Client, Transport};
 use std::time::Duration;
@@ -31,88 +33,36 @@ async fn main() {
         let mut modbus_client = get_modbus_client(&app_config.inverter);
         let mut datapoints: Vec<DataPoint> = Vec::new();
         for mapping in &inverter_config.mappings {
+            debug!("{:?}", mapping);
             let registers =
                 modbus_client.read_input_registers(mapping.register_address - 1, mapping.length);
 
             if registers.is_err() {
                 error!(
-                    "Could not read register at address {} (-1)",
-                    mapping.register_address
+                    "Could not read input registers at address {} with length {}",
+                    mapping.register_address, mapping.length
                 );
                 continue;
             }
 
             let registers = registers.unwrap();
 
-            let datapoint_builder =
-                DataPoint::builder(&inverter_config.inverter_slug.to_case(Case::Snake))
-                    .tag("inverter", &inverter_config.inverter_slug)
-                    .tag("ip_address", &app_config.inverter.inverter_address);
-
             match mapping.data_type.as_str() {
-                "string" => {
-                    let result = registers.convert_to_string();
-                    debug!(
-                        "Register name {} has been read as type {} with value {}",
-                        mapping.name, mapping.data_type, result
-                    );
-                    let datapoint = datapoint_builder
-                        .field(mapping.name.to_case(Case::Snake), result.clone())
-                        .build()
-                        .unwrap();
-                    datapoints.push(datapoint);
+                "string" | "hex" => {
+                    let human_readable: Result<String, String> =
+                        registers.try_into_human_readable(mapping.data_type.as_str());
+                    debug!("{}", human_readable.unwrap());
                 }
-                "hex" => {
-                    let result = registers.convert_to_hex();
-                    debug!(
-                        "Register name {} has been read as type {} with value {}",
-                        mapping.name, mapping.data_type, result
-                    );
-                    let datapoint = datapoint_builder
-                        .field(mapping.name.to_case(Case::Snake), result.clone())
-                        .build()
-                        .unwrap();
-                    datapoints.push(datapoint);
-                }
-                "float" => {
-                    let result = registers.convert_to_float(&mapping.precision);
-                    debug!(
-                        "Register name {} has been read as type {} with value {}",
-                        mapping.name, mapping.data_type, result
-                    );
-                    let datapoint = datapoint_builder
-                        .field(mapping.name.to_case(Case::Snake), result)
-                        .build()
-                        .unwrap();
-                    datapoints.push(datapoint);
-                }
-                "u32" => {
-                    let result = i64::from(registers.convert_to_u32());
-                    debug!(
-                        "Register name {} has been read as type {} with value {}",
-                        mapping.name, mapping.data_type, result
-                    );
 
-                    if mapping.value_enum.is_some() {
-                        let old_result = result.clone();
-                        let value_enum = &mapping.value_enum.as_ref().unwrap();
-                        let result = resolve_enum_value(&result, &value_enum);
-                        debug!(
-                            "Register name {} has an enum mapping which converted {} to {}",
-                            mapping.name, old_result, result
-                        );
-                    }
-
-                    let datapoint = datapoint_builder
-                        .field(mapping.name.to_case(Case::Snake), result)
-                        .build()
-                        .unwrap();
-                    datapoints.push(datapoint);
+                "u16" | "u32" | "i16" | "i32" => {
+                    let human_readable: Result<i64, String> =
+                        registers.try_into_human_readable(mapping.data_type.as_str());
+                    debug!("{}", human_readable.unwrap());
                 }
+
                 _ => {
-                    debug!("{:?}", registers);
                     error!(
-                        "register_type {} has no defined conversion. Skipping",
+                        "No conversion mapping found for data_type {}",
                         mapping.data_type
                     );
                     continue;
@@ -121,16 +71,16 @@ async fn main() {
         }
         modbus_client.close().unwrap();
 
-        let influxdb2_write_result = influxdb_client
-            .write(
-                app_config.influxdb2.bucket.as_str(),
-                stream::iter(datapoints),
-            )
-            .await;
-
-        if influxdb2_write_result.is_err() {
-            error!("{}", influxdb2_write_result.unwrap_err().to_string());
-        }
+        // let influxdb2_write_result = influxdb_client
+        //     .write(
+        //         app_config.influxdb2.bucket.as_str(),
+        //         stream::iter(datapoints),
+        //     )
+        //     .await;
+        //
+        // if influxdb2_write_result.is_err() {
+        //     error!("{}", influxdb2_write_result.unwrap_err().to_string());
+        // }
 
         info!(
             "finished cycle. Waiting for {} seconds ...",
@@ -143,23 +93,169 @@ async fn main() {
         ))
         .await;
     }
+
+    //         let registers =
+    //             modbus_client.read_input_registers(mapping.register_address - 1, mapping.length);
+    //
+    //         if registers.is_err() {
+    //             error!(
+    //                 "Could not read register at address {} (-1)",
+    //                 mapping.register_address
+    //             );
+    //             continue;
+    //         }
+    //
+    //         let registers = registers.unwrap();
+    //
+    //         let datapoint_builder =
+    //             DataPoint::builder(&inverter_config.inverter_slug.to_case(Case::Snake))
+    //                 .tag("inverter", &inverter_config.inverter_slug)
+    //                 .tag("ip_address", &app_config.inverter.inverter_address);
+    //
+    //         match mapping.data_type.as_str() {
+    //             "string" => {
+    //                 let result = registers.convert_to_string();
+    //                 debug!(
+    //                     "Register name {} has been read as type {} with value {}",
+    //                     mapping.name, mapping.data_type, result
+    //                 );
+    //                 let datapoint = datapoint_builder
+    //                     .field(mapping.name.to_case(Case::Snake), result.clone())
+    //                     .build()
+    //                     .unwrap();
+    //                 datapoints.push(datapoint);
+    //             }
+    //             "hex" => {
+    //                 let result = registers.convert_to_hex();
+    //                 debug!(
+    //                     "Register name {} has been read as type {} with value {}",
+    //                     mapping.name, mapping.data_type, result
+    //                 );
+    //
+    //                 if mapping.value_enum.is_some() {
+    //                     let old_result = result.clone();
+    //                     let value_enum = &mapping.value_enum.as_ref().unwrap();
+    //                     let result = resolve_enum_value(&result, &value_enum).unwrap_or(old_result.as_str());
+    //                     debug!(
+    //                         "Register name {} has an enum mapping which converted {} to {}",
+    //                         mapping.name, old_result, result
+    //                     );
+    //                 }
+    //
+    //                 let datapoint = datapoint_builder
+    //                     .field(mapping.name.to_case(Case::Snake), result.clone())
+    //                     .build()
+    //                     .unwrap();
+    //                 datapoints.push(datapoint);
+    //             }
+    //             "float" => {
+    //                 let result = registers.convert_to_float(&mapping.precision);
+    //                 debug!(
+    //                     "Register name {} has been read as type {} with value {}",
+    //                     mapping.name, mapping.data_type, result
+    //                 );
+    //
+    //                 let datapoint = datapoint_builder
+    //                     .field(mapping.name.to_case(Case::Snake), result)
+    //                     .build()
+    //                     .unwrap();
+    //                 datapoints.push(datapoint);
+    //             }
+    //             "int" => {
+    //                 let result = registers.convert_to_int();
+    //                 debug!(
+    //                     "Register name {} has been read as type {} with value {}",
+    //                     mapping.name, mapping.data_type, result
+    //                 );
+    //
+    //                 if mapping.value_enum.is_some() {
+    //                     let old_result = result.clone().to_string();
+    //                     let value_enum = &mapping.value_enum.as_ref().unwrap();
+    //                     let result = resolve_enum_value(&result, &value_enum).unwrap_or(old_result.as_str());
+    //                     debug!(
+    //                         "Register name {} has an enum mapping which converted {} to {}",
+    //                         mapping.name, old_result, result
+    //                     );
+    //                 }
+    //
+    //                 let datapoint = datapoint_builder
+    //                     .field(mapping.name.to_case(Case::Snake), result)
+    //                     .build()
+    //                     .unwrap();
+    //                 datapoints.push(datapoint);
+    //             }
+    //             "u32" => {
+    //                 let int_result = registers.convert_registers_to_integer();
+    //                 debug!("{}",int_result);
+    //             }
+    //             "bla" => {
+    //                 debug!("{:?}", registers);
+    //             }
+    //             _ => {
+    //                 error!(
+    //                     "register_type {} has no defined conversion. Skipping",
+    //                     mapping.data_type
+    //                 );
+    //                 continue;
+    //             }
+    //         }
+    //     }
+    //     modbus_client.close().unwrap();
+    //
+    //     let influxdb2_write_result = influxdb_client
+    //         .write(
+    //             app_config.influxdb2.bucket.as_str(),
+    //             stream::iter(datapoints),
+    //         )
+    //         .await;
+    //
+    //     if influxdb2_write_result.is_err() {
+    //         error!("{}", influxdb2_write_result.unwrap_err().to_string());
+    //     }
+    //
+    //     info!(
+    //         "finished cycle. Waiting for {} seconds ...",
+    //         app_config.solaris.read_frequency
+    //     );
+    //     info!("-------------------------------------------------------------------");
+    //
+    //     tokio::time::sleep(Duration::from_secs(
+    //         app_config.solaris.read_frequency.into(),
+    //     ))
+    //     .await;
+    // }
 }
 
-fn resolve_enum_value<T: PartialEq + std::fmt::Debug>(
-    key: T,
-    enum_mapping: &Vec<ValueEnum>,
-) -> String {
-    let result = enum_mapping
-        .iter()
-        .find(|e| e.key == format!("{:?}", key))
-        .map(|e| &e.value[..]);
+// fn build_influx_db_point<T>(app_config: &AppConfig, inverter_slug: &str, mapping: &Mapping, datapoint_value: T) -> Result<DataPoint, DataPointError>
+// where
+//     T: Copy + Into<FieldValue>
+// {
+//     let datapoint_builder =
+//         DataPoint::builder(&inverter_slug.to_case(Case::Snake))
+//             .tag("inverter", &inverter_slug)
+//             .tag("ip_address", &app_config.inverter.inverter_address);
+//
+//     let datapoint = datapoint_builder
+//         .field(mapping.name.to_case(Case::Snake), datapoint_value.into())
+//         .build();
+// }
 
-    if result.is_none() {
-        // TODO: Handle
-    }
-
-    result.unwrap().to_string()
-}
+// fn resolve_enum_value<T: ToString>(
+//     key: T,
+//     enum_mapping: &Vec<ValueEnum>,
+// ) -> Option<&str> {
+//     let result = enum_mapping
+//         .iter()
+//         .find(|e| e.key == key.to_string())
+//         .map(|e| &e.value[..]);
+//
+//     if result.is_none() {
+//         debug!("Found no enum value for {} in mapping {:?}", key.to_string(), enum_mapping);
+//         return None
+//     }
+//
+//     result
+// }
 
 fn get_influxdb2_client(influxdb2: &app_config::Influxdb2) -> influxdb2::Client {
     influxdb2::Client::new(&influxdb2.uri, &influxdb2.org, &influxdb2.token)

@@ -15,23 +15,27 @@ mappings:
     register_address: 5000
     length: 1
     data_type: hex
+    value_enum:
+      -
+        key: 0e0f
+        value: Sungrow SH10RT-V112
   -
     name: Inverter temperature
     register_address: 5008
     length: 1
-    data_type: float
+    data_type: i16
     precision: 0.1
   -
     name: Nominal Power Output
     register_address: 5001
     length: 1
-    data_type: float
+    data_type: u16
     precision: 0.1
   -
     name: Output Type
     register_address: 5002
     length: 1
-    data_type: u32
+    data_type: u16
     value_enum:
       -
         key: 0
@@ -42,4 +46,15 @@ mappings:
       -
         key: 2
         value: 3P3L
-
+  -
+    name: Daily Output Energy
+    register_address: 5003
+    length: 1
+    data_type: u16
+    precision: 0.1
+  -
+    name: Total Output Energy
+    register_address: 6390
+    length: 2
+    data_type: u32
+    precision: 0.1

@@ -1,48 +1,97 @@
 use hex;
-use std::ops::{Mul};
+use influxdb2::models::FieldValue;
+use log::{debug, error, info};
+use std::convert::TryInto;
+use std::error::Error;
+use std::fs::read_to_string;
+use std::ops::Mul;
 
-pub trait Convert {
-    fn convert_to_string(&self) -> String;
-    fn convert_to_hex(&self) -> String;
-    fn convert_to_float(&self, precision: &f64) -> f64;
-    fn convert_to_u32(&self) -> u32;
+pub trait Convert<T> {
+    fn try_into_human_readable(&self, data_type: &str) -> Result<T, String>;
 }
 
-impl Convert for Vec<u16> {
-    fn convert_to_string(&self) -> String {
-        let bytes: Vec<u8> = self
-            .iter()
-            .flat_map(|&r| r.to_be_bytes().to_vec())
-            .collect();
+impl Convert<String> for Vec<u16> {
+    fn try_into_human_readable(&self, data_type: &str) -> Result<String, String> {
+        match data_type {
+            "string" => {
+                let bytes: Vec<u8> = self
+                    .iter()
+                    .flat_map(|&r| r.to_be_bytes().to_vec())
+                    .collect();
 
-        String::from_utf8_lossy(&bytes).trim().to_owned()
-    }
+                Ok(String::from_utf8_lossy(&bytes).trim().to_owned())
+            }
 
-    fn convert_to_hex(&self) -> String {
-        let bytes: Vec<u8> = self
-            .iter()
-            .flat_map(|&r| r.to_be_bytes().to_vec())
-            .collect();
-        hex::encode(&bytes)
-    }
+            "hex" => {
+                let bytes: Vec<u8> = self
+                    .iter()
+                    .flat_map(|&r| r.to_be_bytes().to_vec())
+                    .collect();
 
-    fn convert_to_float(&self, precision: &f64) -> f64 {
-        f64::from(self[0]).mul(precision)
-    }
+                Ok(hex::encode(&bytes))
+            }
 
-    fn convert_to_u32(&self) -> u32 {
-        if self.len() == 1 {
-            return u32::from(self[0]);
+            _ => Err(format!("No conversion specified for type {}", data_type)),
         }
-
-        let bytes: [u8; 4] = self
-            .iter()
-            .map(|&r| r.to_be_bytes())
-            .flatten()
-            .collect::<Vec<u8>>()
-            .try_into()
-            .expect("input slice must contain exactly 2 u16 values");
-
-        u32::from_be_bytes(bytes)
     }
 }
+
+impl Convert<i64> for Vec<u16> {
+    fn try_into_human_readable(&self, data_type: &str) -> Result<i64, String> {
+        match data_type {
+            "u32" => {
+                let bytes: Vec<u8> = self
+                    .iter()
+                    .flat_map(|&r| r.to_be_bytes().to_vec())
+                    .collect();
+
+                let byte_slice = &bytes[..];
+                let result = u32::from_be_bytes(byte_slice.try_into().unwrap()) as i64;
+                Ok(result)
+            }
+
+            "i32" => {
+                let bytes: Vec<u8> = self
+                    .iter()
+                    .flat_map(|&r| r.to_be_bytes().to_vec())
+                    .collect();
+
+                let byte_slice = &bytes[..];
+                let result = i32::from_be_bytes(byte_slice.try_into().unwrap()) as i64;
+                Ok(result)
+            }
+
+            "u16" => Ok(self[0] as i64),
+            "i16" => Ok(self[0] as i64),
+            _ => Err(format!("No conversion specified for type {}", data_type)),
+        }
+    }
+}
+
+// impl Convert<f64> for Vec<u16> {
+//     fn try_into_human_readable(&self, data_type: &str) -> Result<f64, String> {
+//         match data_type {
+//             "float" => {
+//                 let bytes: Vec<u8> = self
+//                     .iter()
+//                     .flat_map(|&r| r.to_be_bytes().to_vec())
+//                     .collect();
+//
+//                 let byte_slice = &bytes[..];
+//                 let result = f64::from_be_bytes(byte_slice.try_into().unwrap());
+//                 Ok(result)
+//             }
+//
+//             _ => Err(format!("No conversion specified for type {}", data_type)),
+//         }
+//     }
+// }
+//
+// impl Convert<bool> for Vec<u16> {
+//     fn try_into_human_readable(&self, data_type: &str) -> Result<bool, String> {
+//         match data_type {
+//             "bool" => Ok(self[0] > 0),
+//             _ => Err(format!("No conversion specified for type {}", data_type)),
+//         }
+//     }
+// }

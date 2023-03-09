@@ -11,10 +11,11 @@ pub struct InverterConfig {
 pub struct Mapping {
     pub name: String,
     pub register_address: u16,
+    #[serde(default)]
     pub length: u16,
     pub data_type: String,
     #[serde(default)]
-    pub precision: f64,
+    pub precision: Option<f64>,
     #[serde(default)]
     pub value_enum: Option<Vec<ValueEnum>>,
 }
