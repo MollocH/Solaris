@@ -10,6 +10,7 @@ use influxdb2::models::{DataPoint, FieldValue};
 use log::{debug, error, info};
 use modbus::{tcp, Client, Transport};
 use std::time::Duration;
+use crate::convert::{ConversionResult, ResolveEnumValue};
 
 mod app_config;
 mod convert;
@@ -47,17 +48,25 @@ async fn main() {
 
             let registers = registers.unwrap();
 
-            match mapping.data_type.as_str() {
+            let mut conversion_result = match mapping.data_type.as_str() {
                 "string" | "hex" => {
                     let human_readable: Result<String, String> =
                         registers.try_into_human_readable(mapping.data_type.as_str());
-                    debug!("{}", human_readable.unwrap());
+
+                    // TODO: error handling
+                    let human_readable = human_readable.unwrap();
+                    debug!("{}", human_readable);
+                    ConversionResult::StringResult(human_readable)
                 }
 
                 "u16" | "u32" | "i16" | "i32" => {
                     let human_readable: Result<i64, String> =
                         registers.try_into_human_readable(mapping.data_type.as_str());
-                    debug!("{}", human_readable.unwrap());
+
+                    let human_readable = human_readable.unwrap();
+                    debug!("{}", human_readable);
+
+                    ConversionResult::IntResult(human_readable)
                 }
 
                 _ => {
@@ -67,6 +76,18 @@ async fn main() {
                     );
                     continue;
                 }
+            };
+
+            // precision and enums should exclude each other
+            if mapping.precision.is_some() {
+                let result = conversion_result.try_resolve_enum(mapping.value_enum.unwrap());
+                if result.is_none() {
+
+                }
+
+                conversion_result = ConversionResult::StringResult(result.unwrap());
+            } else if mapping.value_enum.is_some() {
+                let result = conversion_result.
             }
         }
         modbus_client.close().unwrap();
@@ -225,6 +246,7 @@ async fn main() {
     //     .await;
     // }
 }
+
 
 // fn build_influx_db_point<T>(app_config: &AppConfig, inverter_slug: &str, mapping: &Mapping, datapoint_value: T) -> Result<DataPoint, DataPointError>
 // where
