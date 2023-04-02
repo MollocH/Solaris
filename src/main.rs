@@ -23,7 +23,7 @@ async fn main() {
 
     let app_config = app_config::read();
 
-    let inverter_config = inverter_config::read(&config_file);
+    let inverter_config = inverter_config::read(config_file);
     let influxdb_client = get_influxdb2_client(&app_config.influxdb2);
 
     info!("-------------------------------------------------------------------");
@@ -47,6 +47,8 @@ async fn main() {
             }
 
             let registers = registers.unwrap();
+
+            debug!("Registers value: {:?}", registers);
 
             let mut conversion_result = match mapping.data_type.as_str() {
                 "string" | "hex" => {
@@ -97,7 +99,7 @@ async fn main() {
             // precision and enums should exclude each other
             if mapping.precision.is_some() {
                 let precision = mapping.precision.as_ref().unwrap();
-                let result = conversion_result.try_resolve_precision(&precision);
+                let result = conversion_result.try_resolve_precision(precision);
                 if result.is_none() {
                     error!(
                         "Could not apply precision {:?} for value {:?}",
@@ -114,7 +116,7 @@ async fn main() {
                 conversion_result = ConversionResult::FloatResult(result);
             } else if mapping.value_enum.is_some() {
                 let enum_mapping = mapping.value_enum.as_ref().unwrap();
-                let result = conversion_result.try_resolve_enum(&enum_mapping);
+                let result = conversion_result.try_resolve_enum(enum_mapping);
                 if result.is_none() {
                     error!(
                         "Could not resolve enum {:?} for value {:?}",

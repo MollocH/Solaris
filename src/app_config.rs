@@ -3,7 +3,7 @@ use std::fs::File;
 use std::{env, fs};
 
 use serde::{Deserialize, Serialize};
-use serde_json;
+
 
 #[derive(Deserialize, Debug, Serialize)]
 pub struct AppConfig {
@@ -44,9 +44,9 @@ pub fn read() -> AppConfig {
     }
 
     let f =
-        File::open(app_config_file).expect(&format!("Could not open file '{}'", app_config_file));
+        File::open(app_config_file).unwrap_or_else(|_| panic!("Could not open file '{}'", app_config_file));
     let mut app_config: AppConfig = serde_yaml::from_reader(f)
-        .expect(&format!("Could not parse yaml file '{}'", app_config_file));
+        .unwrap_or_else(|_| panic!("Could not parse yaml file '{}'", app_config_file));
 
     overwrite_app_config_with_environment(&mut app_config);
 
@@ -65,19 +65,19 @@ fn overwrite_app_config_with_environment(app_config: &mut AppConfig) {
     );
     app_config.inverter.inverter_port = parse_env_var(
         "SOLARIS_INVERTER_PORT",
-        app_config.inverter.inverter_port.clone(),
+        app_config.inverter.inverter_port,
     );
     app_config.inverter.tcp_read_timeout = parse_env_var(
         "SOLARIS_INVERTER_TCP_READ_TIMEOUT",
-        app_config.inverter.tcp_read_timeout.clone(),
+        app_config.inverter.tcp_read_timeout,
     );
     app_config.inverter.tcp_connect_timeout = parse_env_var(
         "SOLARIS_INVERTER_TCP_CONNECT_TIMEOUT",
-        app_config.inverter.tcp_connect_timeout.clone(),
+        app_config.inverter.tcp_connect_timeout,
     );
     app_config.inverter.inverter_modbus_uid = parse_env_var(
         "SOLARIS_INVERTER_MODBUS_UID",
-        app_config.inverter.inverter_modbus_uid.clone(),
+        app_config.inverter.inverter_modbus_uid,
     );
     app_config.influxdb2.uri =
         parse_env_var("SOLARIS_INFLUXDB2_URI", app_config.influxdb2.uri.clone());
@@ -93,7 +93,7 @@ fn overwrite_app_config_with_environment(app_config: &mut AppConfig) {
     );
     app_config.solaris.read_frequency = parse_env_var(
         "SOLARIS_READ_FREQUENCY",
-        app_config.solaris.read_frequency.clone(),
+        app_config.solaris.read_frequency,
     );
 }
 

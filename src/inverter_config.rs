@@ -31,7 +31,7 @@ pub struct ValueEnum {
 }
 
 pub fn read(config_file: &String) -> InverterConfig {
-    let f = File::open(config_file).expect(&format!("Could not open file '{}'", &config_file));
-    return serde_yaml::from_reader(f)
-        .expect(&format!("Could not parse yaml file '{}'", &config_file));
+    let f = File::open(config_file).unwrap_or_else(|_| panic!("Could not open file '{}'", &config_file));
+    serde_yaml::from_reader(f)
+        .unwrap_or_else(|_| panic!("Could not parse yaml file '{}'", &config_file))
 }

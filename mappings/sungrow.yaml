@@ -1,35 +1,31 @@
 inverter_slug: Sungrow SH10RT
 mappings:
-  -
-    name: ARM firmware
+  - name: ARM firmware
     register_address: 4954
     length: 12
     data_type: string
-  -
-    name: DSP firmware
+  - name: DSP firmware
     register_address: 4969
     length: 13
     data_type: string
-  -
-    name: Device type
+  - name: Device type
     register_address: 5000
     data_type: hex
     value_enum:
       -
         key: 0e0f
         value: Sungrow SH10RT-V112
-  -
-    name: Inverter temperature
+  - name: Inverter temperature
     register_address: 5008
     data_type: i16
     precision: 0.1
-  -
-    name: Nominal Power Output
+
+  - name: Nominal Power Output
     register_address: 5001
     data_type: u16
     precision: 0.1
-  -
-    name: Output Type
+
+  - name: Output Type
     register_address: 5002
     data_type: u16
     value_enum:
@@ -42,24 +38,23 @@ mappings:
       -
         key: 2
         value: 3P3L
-  -
-    name: Daily Output Energy
+  - name: Daily Output Energy
     register_address: 5003
     data_type: u16
     precision: 0.1
-  -
-    name: Total Output Energy
+
+  - name: Total Output Energy
     register_address: 6390
     length: 2
     data_type: u32
     precision: 0.1
-  -
-    name: MPPT 1 Voltage
+
+  - name: MPPT 1 Voltage
     register_address: 5011
     data_type: u16
     precision: 0.1
-  -
-    name: MPPT 1 Current
+
+  - name: MPPT 1 Current
     register_address: 5012
     data_type: u16
     precision: 0.1
@@ -73,3 +68,14 @@ mappings:
     register_address: 5014
     data_type: u16
     precision: 0.1
+
+  - name: Total DC Power
+    register_address: 5017
+    length: 2
+    data_type: u32
+
+#  - name: Monthly Direct Energy
+#    register_address:  13036
+#    length: 1
+#    data_type: u16
+#    precision: 0.1

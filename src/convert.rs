@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 use std::ops::Mul;
 
-use hex;
+
 use log::{debug, error};
 
 use crate::inverter_config::ValueEnum;
@@ -86,7 +86,7 @@ impl Convert<String> for Vec<u16> {
                     .flat_map(|&r| r.to_be_bytes().to_vec())
                     .collect();
 
-                Ok(hex::encode(&bytes))
+                Ok(hex::encode(bytes))
             }
 
             _ => Err(format!("No conversion specified for type {}", data_type)),
