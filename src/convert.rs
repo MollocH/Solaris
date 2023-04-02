@@ -1,10 +1,9 @@
-use hex;
-use influxdb2::models::FieldValue;
-use log::{debug, error, info};
 use std::convert::TryInto;
-use std::error::Error;
-use std::fs::read_to_string;
-use std::ops::{Div, Mul};
+use std::ops::Mul;
+
+use hex;
+use log::{debug, error};
+
 use crate::inverter_config::ValueEnum;
 
 #[derive(Debug)]
@@ -12,12 +11,12 @@ pub enum ConversionResult {
     StringResult(String),
     IntResult(i64),
     FloatResult(f64),
-    BooleanResult(bool)
+    BooleanResult(bool),
 }
 
-pub trait ResolveEnumValue {
-    fn try_resolve_enum(&self, enum_mapping: Vec<ValueEnum>) -> Option<String> {
-        let value: String = (*self).into();
+impl ConversionResult {
+    pub fn try_resolve_enum(&self, enum_mapping: &Vec<ValueEnum>) -> Option<String> {
+        let value = self.to_string();
 
         let result = enum_mapping
             .iter()
@@ -25,26 +24,21 @@ pub trait ResolveEnumValue {
             .map(|e| &e.value[..]);
 
         if result.is_none() {
-            debug!("Found no enum value for {} in mapping {:?}", value, enum_mapping);
-            return None
+            debug!(
+                "Found no enum value for {} in mapping {:?}",
+                value, enum_mapping
+            );
+            return None;
         }
 
-        Some(String::from(result))
+        Some(String::from(result.unwrap()))
     }
-}
 
-impl ResolveEnumValue for ConversionResult{}
-
-pub trait ResolvePrecision {
-    fn try_resolve_precision(&self, precision: f64) -> Option<f64>;
-}
-
-impl ResolvePrecision for ConversionResult {
-    fn try_resolve_precision(&self, precision: f64) -> Option<f64> {
+    pub fn try_resolve_precision(&self, precision: &f64) -> Option<f64> {
         match self {
             ConversionResult::IntResult(conversion_result) => {
-                let value: f64 = conversion_result.into();
-                some(value.div(precision))
+                let value: f64 = (*conversion_result) as f64;
+                Some(value.mul(precision))
             }
 
             _ => {
@@ -52,8 +46,22 @@ impl ResolvePrecision for ConversionResult {
                 None
             }
         }
-
     }
+}
+
+impl ToString for ConversionResult {
+    fn to_string(&self) -> String {
+        match self {
+            ConversionResult::StringResult(value) => value.to_string(),
+            ConversionResult::FloatResult(value) => value.to_string(),
+            ConversionResult::BooleanResult(value) => value.to_string(),
+            ConversionResult::IntResult(value) => value.to_string(),
+        }
+    }
+}
+
+pub trait ResolvePrecision {
+    fn try_resolve_precision(&self, precision: f64) -> Option<f64>;
 }
 
 pub trait Convert<T> {
