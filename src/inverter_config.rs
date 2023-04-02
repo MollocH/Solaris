@@ -11,13 +11,17 @@ pub struct InverterConfig {
 pub struct Mapping {
     pub name: String,
     pub register_address: u16,
-    #[serde(default)]
+    #[serde(default = "default_register_length")]
     pub length: u16,
     pub data_type: String,
     #[serde(default)]
     pub precision: Option<f64>,
     #[serde(default)]
     pub value_enum: Option<Vec<ValueEnum>>,
+}
+
+fn default_register_length() -> u16 {
+    1
 }
 
 #[derive(Deserialize, Debug)]

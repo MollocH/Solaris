@@ -13,7 +13,6 @@ mappings:
   -
     name: Device type
     register_address: 5000
-    length: 1
     data_type: hex
     value_enum:
       -
@@ -22,19 +21,16 @@ mappings:
   -
     name: Inverter temperature
     register_address: 5008
-    length: 1
     data_type: i16
     precision: 0.1
   -
     name: Nominal Power Output
     register_address: 5001
-    length: 1
     data_type: u16
     precision: 0.1
   -
     name: Output Type
     register_address: 5002
-    length: 1
     data_type: u16
     value_enum:
       -
@@ -49,7 +45,6 @@ mappings:
   -
     name: Daily Output Energy
     register_address: 5003
-    length: 1
     data_type: u16
     precision: 0.1
   -
@@ -57,4 +52,24 @@ mappings:
     register_address: 6390
     length: 2
     data_type: u32
+    precision: 0.1
+  -
+    name: MPPT 1 Voltage
+    register_address: 5011
+    data_type: u16
+    precision: 0.1
+  -
+    name: MPPT 1 Current
+    register_address: 5012
+    data_type: u16
+    precision: 0.1
+
+  - name: MPPT 2 Voltage
+    register_address: 5013
+    data_type: u16
+    precision: 0.1
+
+  - name: MPPT 2 Current
+    register_address: 5014
+    data_type: u16
     precision: 0.1
