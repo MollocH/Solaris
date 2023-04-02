@@ -53,7 +53,14 @@ async fn main() {
                     let human_readable: Result<String, String> =
                         registers.try_into_human_readable(mapping.data_type.as_str());
 
-                    // TODO: error handling
+                    if human_readable.is_err() {
+                        error!(
+                            "Could not convert registers starting at {} to string",
+                            mapping.register_address
+                        );
+                        continue;
+                    }
+
                     let human_readable = human_readable.unwrap();
                     debug!("Converted to value(string): {}", human_readable);
 
@@ -64,7 +71,14 @@ async fn main() {
                     let human_readable: Result<i64, String> =
                         registers.try_into_human_readable(mapping.data_type.as_str());
 
-                    // TODO: error handling
+                    if human_readable.is_err() {
+                        error!(
+                            "Could not convert registers starting at {} to i64",
+                            mapping.register_address
+                        );
+                        continue;
+                    }
+
                     let human_readable = human_readable.unwrap();
                     debug!("Converted to value(i64): {}", human_readable);
 
