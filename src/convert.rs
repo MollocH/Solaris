@@ -1,12 +1,13 @@
 use std::convert::TryInto;
-use std::ops::Mul;
+use std::io;
+use std::ops::{Div, Mul};
 
 
 use log::{debug, error};
 
-use crate::inverter_config::ValueEnum;
+use crate::inverter_config::{InverterConfig, Mapping, ValueEnum};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConversionResult {
     StringResult(String),
     IntResult(i64),
@@ -15,6 +16,43 @@ pub enum ConversionResult {
 }
 
 impl ConversionResult {
+    pub fn apply_precision(&self, precision: &f64) -> Result<ConversionResult, String> {
+        let result = self.try_resolve_precision(precision);
+        if result.is_none() {
+            let error_message = format!(
+                "Could not apply precision {} for value {:?}",
+                precision,
+                self
+            );
+            return Err(error_message);
+        }
+
+        let mut result = result.unwrap();
+        result = result.mul(100.0).trunc().div(100.0);
+
+        debug!("Converted with precision {} to {}", precision, result);
+
+        Ok(ConversionResult::FloatResult(result))
+    }
+
+    pub fn resolve_enum(&self, enum_mapping: &Vec<ValueEnum>) -> Result<ConversionResult, String> {
+        let result = self.try_resolve_enum(enum_mapping);
+        if result.is_none() {
+            let error_message = format!(
+                "Could not resolve enum {:?} for value {:?}",
+                enum_mapping,
+                self
+            );
+            return Err(error_message);
+        }
+
+        let result = result.unwrap();
+
+        debug!("Converted to enum {}", result);
+
+        Ok(ConversionResult::StringResult(result))
+    }
+
     pub fn try_resolve_enum(&self, enum_mapping: &Vec<ValueEnum>) -> Option<String> {
         let value = self.to_string();
 
@@ -34,7 +72,7 @@ impl ConversionResult {
         Some(String::from(result.unwrap()))
     }
 
-    pub fn try_resolve_precision(&self, precision: &f64) -> Option<f64> {
+    fn try_resolve_precision(&self, precision: &f64) -> Option<f64> {
         match self {
             ConversionResult::IntResult(conversion_result) => {
                 let value: f64 = (*conversion_result) as f64;
@@ -62,6 +100,75 @@ impl ToString for ConversionResult {
 
 pub trait ResolvePrecision {
     fn try_resolve_precision(&self, precision: f64) -> Option<f64>;
+}
+
+pub fn try_from_registers(mapping: &Mapping, registers: &Vec<u16>) -> Result<ConversionResult, String> {
+    let conversion_result: Result<ConversionResult, String> = match mapping.data_type.as_str() {
+        "string" | "hex" => {
+            let human_readable: Result<String, String> =
+                registers.try_into_human_readable(mapping.data_type.as_str());
+
+            if human_readable.is_err() {
+                let error_message = format!(
+                    "Could not convert registers starting at {} to string",
+                    mapping.register_address
+                );
+                return Err(error_message);
+            }
+
+            let human_readable = human_readable.unwrap();
+            debug!("Converted to value(string): {}", human_readable);
+
+            Ok(ConversionResult::StringResult(human_readable))
+        }
+
+        "u16" | "u32" | "i16" | "i32" => {
+            let human_readable: Result<i64, String> =
+                registers.try_into_human_readable(mapping.data_type.as_str());
+
+            if human_readable.is_err() {
+                let error_message = format!(
+                    "Could not convert registers starting at {} to i64",
+                    mapping.register_address
+                );
+                return Err(error_message);
+            }
+
+            let human_readable = human_readable.unwrap();
+            debug!("Converted to value(i64): {}", human_readable);
+
+            if mapping.statistic_type.is_some() && human_readable == 0 {
+                let error_message = format!(
+                    "Statistics mapping {:?} register returned 0. Skipping because we prevent unwanted overwriting of values",
+                    mapping.register_address
+                );
+                return Err(error_message);
+            }
+
+            Ok(ConversionResult::IntResult(human_readable))
+        }
+
+        _ => {
+            let error_message = format!(
+                "No conversion mapping found for data_type {}",
+                mapping.data_type
+            );
+            Err(error_message)
+        }
+    };
+
+    let conversion_result = conversion_result?;
+
+    // precision and enums should exclude each other
+    if mapping.precision.is_some() {
+        let precision = mapping.precision.as_ref().unwrap();
+        let conversion_result = conversion_result.apply_precision(&precision)?;
+    } else if mapping.value_enum.is_some() {
+        let value_enum = mapping.value_enum.as_ref().unwrap();
+        let conversion_result = conversion_result.resolve_enum(&value_enum)?;
+    }
+
+    Ok(conversion_result)
 }
 
 pub trait Convert<T> {

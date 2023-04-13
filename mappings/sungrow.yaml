@@ -4,10 +4,12 @@ mappings:
     register_address: 4954
     length: 12
     data_type: string
+
   - name: DSP firmware
     register_address: 4969
     length: 13
     data_type: string
+
   - name: Device type
     register_address: 5000
     data_type: hex
@@ -15,6 +17,7 @@ mappings:
       -
         key: 0e0f
         value: Sungrow SH10RT-V112
+
   - name: Inverter temperature
     register_address: 5008
     data_type: i16
@@ -74,8 +77,10 @@ mappings:
     length: 2
     data_type: u32
 
-#  - name: Monthly Direct Energy
-#    register_address:  13036
-#    length: 1
-#    data_type: u16
-#    precision: 0.1
+statistic_mappings:
+  - name: Daily Direct Energy Consumption From PV
+    register_address:  6386
+    statistic_type: Daily
+    length: 1
+    data_type: u16
+    precision: 0.1
